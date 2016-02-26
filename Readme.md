@@ -1,37 +1,11 @@
-# koa-session
+# koa-session-async
 
-[![NPM version][npm-image]][npm-url]
-[![build status][travis-image]][travis-url]
-[![Test coverage][coveralls-image]][coveralls-url]
-[![Gittip][gittip-image]][gittip-url]
-[![David deps][david-image]][david-url]
-[![iojs version][iojs-image]][iojs-url]
-[![node version][node-image]][node-url]
-[![npm download][download-image]][download-url]
-
-[npm-image]: https://img.shields.io/npm/v/koa-session.svg?style=flat-square
-[npm-url]: https://npmjs.org/package/koa-session
-[travis-image]: https://img.shields.io/travis/koajs/session.svg?style=flat-square
-[travis-url]: https://travis-ci.org/koajs/session
-[coveralls-image]: https://img.shields.io/coveralls/koajs/session.svg?style=flat-square
-[coveralls-url]: https://coveralls.io/r/koajs/session?branch=master
-[gittip-image]: https://img.shields.io/gittip/fengmk2.svg?style=flat-square
-[gittip-url]: https://www.gittip.com/fengmk2/
-[david-image]: https://img.shields.io/david/koajs/session.svg?style=flat-square
-[david-url]: https://david-dm.org/koajs/session
-[iojs-image]: https://img.shields.io/badge/io.js-%3E=_1.0-yellow.svg?style=flat-square
-[iojs-url]: http://iojs.org/
-[node-image]: https://img.shields.io/badge/node.js-%3E=_0.12-green.svg?style=flat-square
-[node-url]: http://nodejs.org/download/
-[download-image]: https://img.shields.io/npm/dm/koa-session.svg?style=flat-square
-[download-url]: https://npmjs.org/package/koa-session
-
- Simple cookie-based session middleware for Koa.
+ Simple cookie-based session middleware for Koa 2. Forked from For Koa 2, use [koa-session](https://github.com/koajs/session) to use ES6 and ES7 async/await keywords.
 
 ## Installation
 
 ```js
-$ npm install koa-session
+$ npm i --save koa-session-async
 ```
 
 ## Example
@@ -39,36 +13,45 @@ $ npm install koa-session
   View counter example:
 
 ```js
-var session = require('koa-session');
-var koa = require('koa');
-var app = koa();
+'using strict';
+/*
+    Import required dependencies
+ */
+const session = require('koa-session-async');
+const Koa = require('koa');
 
-app.keys = ['some secret hurr'];
+/*
+    Instantiate the koa app
+ */
+const app = new Koa();
+
+/*
+    Setup secrets
+ */
+app.keys = ['secret'];
+
+/*
+    Attach middleware
+ */
 app.use(session(app));
 
-app.use(function *(){
-  // ignore favicon
-  if (this.path === '/favicon.ico') return;
+/*
+    Hopefully this works...
+ */
+app.use(async (ctx) => {
+  if ('/favicon.ico' === ctx.path){
+    return;
+  }
+  let n = ctx.session.views || 0;
+  ctx.session.views = ++n;
+  ctx.body = n + ' views';
+});
 
-  var n = this.session.views || 0;
-  this.session.views = ++n;
-  this.body = n + ' views';
-})
-
+/*
+    Turn it on
+ */
 app.listen(3000);
 console.log('listening on port 3000');
-```
-For Koa 2, use [koa-convert](https://github.com/gyson/koa-convert) to convert the session middleware :
-
-```js
-const koa = require('koa');
-const session = require('koa-session')
-const convert = require('koa-convert');
-
-const app = new koa();
-app.use(convert(session(app)));
-
-// codes
 ```
 
 ## Semantics

@@ -18,16 +18,8 @@ var ONE_DAY = 24 * 60 * 60 * 1000;
  * @api public
  */
 
-module.exports = function(opts, app){
-  // session(app[, opts])
-  if (opts && typeof opts.use === 'function') {
-    var tmp = app;
-    app = opts;
-    opts = tmp;
-  }
-
+module.exports = function(opts){
   opts = opts || {};
-
   // key
   opts.key = opts.key || 'koa:sess';
 
@@ -35,50 +27,47 @@ module.exports = function(opts, app){
   if (!('maxAge' in opts)) opts.maxAge = opts.maxage;
 
   // defaults
-  if (null == opts.overwrite) opts.overwrite = true;
-  if (null == opts.httpOnly) opts.httpOnly = true;
-  if (null == opts.signed) opts.signed = true;
+  if (null === opts.overwrite) opts.overwrite = true;
+  if (null === opts.httpOnly) opts.httpOnly = true;
+  if (null === opts.signed) opts.signed = true;
 
   debug('session options %j', opts);
 
-  if (!app || typeof app.use !== 'function') {
-    throw new TypeError('app instance required: `session(opts, app)`');
-  }
-
   // setup encoding/decoding
   if (typeof opts.encode !== 'function') {
-    opts.encode = encode
+    opts.encode = encode;
   }
   if (typeof opts.decode !== 'function') {
-    opts.decode = decode
+    opts.decode = decode;
   }
+  return async (ctx, next) => {
 
   // to pass to Session()
-  app.context.sessionKey = opts.key;
+  ctx.sessionKey = opts.key;
 
-  app.context.__defineGetter__('session', function(){
-    var sess = this._sess;
+ctx.__defineGetter__('session', function(){
+    let sess = ctx._sess;
     // already retrieved
     if (sess) return sess;
 
     // unset
     if (false === sess) return null;
 
-    var json = this.cookies.get(opts.key, opts);
+    var json = ctx.cookies.get(opts.key, opts);
 
     if (json) {
       debug('parse %s', json);
       try {
         // make sure sessionOptions exists
-        initSessionOptions(this, opts);
+        initSessionOptions(ctx, opts);
         var obj = opts.decode(json);
-        if (typeof opts.valid === 'function' && !opts.valid(this, obj)) {
+        if (typeof opts.valid === 'function' && !opts.valid(ctx, obj)) {
           // valid session value fail, ignore this session
-          sess = new Session(this);
+          sess = new Session(ctx);
           json = obj;
           debug('invalid %j', obj);
         } else {
-          sess = new Session(this, obj);
+          sess = new Session(ctx, obj);
           // make prev a different object from sess
           json = opts.decode(json);
         }
@@ -90,34 +79,40 @@ module.exports = function(opts, app){
         // but `JSON.parse(string)` will crash.
         debug('decode %j error: %s', json, err);
         if (!(err instanceof SyntaxError)) throw err;
-        sess = new Session(this);
+        sess = new Session(ctx);
         json = null;
       }
     } else {
       debug('new session');
-      sess = new Session(this);
+      sess = new Session(ctx);
     }
 
-    this._sess = sess;
-    this._prevjson = json;
+    ctx._sess = sess;
+    ctx._prevjson = json;
     return sess;
   });
 
-  app.context.__defineSetter__('session', function(val){
-    if (null == val) return this._sess = false;
-    if ('object' == typeof val) return this._sess = new Session(this, val);
+  ctx.__defineSetter__('session', function(val){
+    if (null === val) {
+      ctx._sess = false;
+      return ctx._sess;
+    }
+    if ('object' === typeof val) {
+      ctx._sess = new Session(ctx, val);
+      return ctx._sess;
+    }
     throw new Error('this.session can only be set as null or an object.');
   });
 
-  return function* (next){
+
     // make sessionOptions independent in each request
-    initSessionOptions(this, opts);
+    initSessionOptions(ctx, opts);
     try {
-      yield* next;
+      await next();
     } catch (err) {
       throw err;
     } finally {
-      commit(this, this._prevjson, this._sess, opts);
+      commit(ctx, ctx._prevjson, ctx._sess, opts);
     }
   };
 };
@@ -180,7 +175,7 @@ function Session(ctx, obj) {
   else {
     for (var k in obj) {
       // change session options
-      if ('_maxAge' == k) this._ctx.sessionOptions.maxAge = obj._maxAge;
+      if ('_maxAge' === k) this._ctx.sessionOptions.maxAge = obj._maxAge;
       else this[k] = obj[k];
     }
   }
@@ -199,8 +194,8 @@ Session.prototype.toJSON = function(){
   var obj = {};
 
   Object.keys(this).forEach(function(key){
-    if ('isNew' == key) return;
-    if ('_' == key[0]) return;
+    if ('isNew' === key) return;
+    if ('_' === key[0]) return;
     obj[key] = self[key];
   });
 

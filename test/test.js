@@ -3,79 +3,81 @@ var request = require('supertest');
 var should = require('should');
 var session = require('..');
 
-describe('Koa Session', function(){
+describe('Koa Session', function() {
   var cookie;
 
-  describe('when options.signed = true', function(){
-    describe('when app.keys are set', function(){
-      it('should work', function(done){
+  describe('when options.signed = true', function() {
+    describe('when app.keys are set', function() {
+      it('should work', function(done) {
         var app = koa();
 
         app.keys = ['a', 'b'];
         app.use(session({}, app));
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.message = 'hi';
           this.body = this.session;
         });
 
         request(app.listen())
-        .get('/')
-        .expect(200, done);
-      })
-    })
+          .get('/')
+          .expect(200, done);
+      });
+    });
 
-    describe('when app.keys are not set', function(){
-      it('should throw', function(done){
+    describe('when app.keys are not set', function() {
+      it('should throw', function(done) {
         var app = koa();
 
         app.use(session(app));
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.message = 'hi';
           this.body = this.session;
         });
 
         request(app.listen())
-        .get('/')
-        .expect(500, done);
-      })
-    })
+          .get('/')
+          .expect(500, done);
+      });
+    });
 
-    describe('when app not set', function(){
-      it('should throw', function(){
+    describe('when app not set', function() {
+      it('should throw', function() {
         var app = koa();
-        (function(){
+        (function() {
           app.use(session());
         }).should.throw('app instance required: `session(opts, app)`');
-      })
-    })
-  })
+      });
+    });
+  });
 
-  describe('when options.signed = false', function(){
-    describe('when app.keys are not set', function(){
-      it('should work', function(done){
+  describe('when options.signed = false', function() {
+    describe('when app.keys are not set', function() {
+      it('should work', function(done) {
         var app = koa();
 
-        app.use(session({ signed: false }, app));
+        app.use(session({
+          signed: false
+        }, app));
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.message = 'hi';
           this.body = this.session;
         });
 
         request(app.listen())
-        .get('/')
-        .expect(200, done);
-      })
-    })
-  })
+          .get('/')
+          .expect(200, done);
+      });
+    });
+  });
 
-  describe('when the session contains a ;', function(){
-    it('should still work', function(done){
-      var app = App();
+  describe('when the session contains a ;', function() {
+    it('should still work', function(done) {
+      var app = new App();
 
-      app.use(function *(){
+      app.use(function*() {
         if (this.method === 'POST') {
           this.session.string = ';';
           this.status = 204;
@@ -87,271 +89,277 @@ describe('Koa Session', function(){
       var server = app.listen();
 
       request(server)
-      .post('/')
-      .expect(204, function(err, res){
-        if (err) return done(err);
-        var cookie = res.headers['set-cookie'];
-        request(server)
-        .get('/')
-        .set('Cookie', cookie.join(';'))
-        .expect(';', done);
-      })
-    })
-  })
+        .post('/')
+        .expect(204, function(err, res) {
+          if (err) return done(err);
+          var cookie = res.headers['set-cookie'];
+          request(server)
+            .get('/')
+            .set('Cookie', cookie.join(';'))
+            .expect(';', done);
+        });
+    });
+  });
 
-  describe('new session', function(){
-    describe('when not accessed', function(){
+  describe('new session', function() {
+    describe('when not accessed', function() {
       it('should not Set-Cookie', function(done) {
-        var app = App();
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.body = 'greetings';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          res.header.should.not.have.property('set-cookie');
-          done();
-        })
-      })
-    })
+          .get('/')
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            res.header.should.not.have.property('set-cookie');
+            done();
+          });
+      });
+    });
 
-    describe('when accessed and not populated', function(done){
+    describe('when accessed and not populated', function(done) {
       it('should not Set-Cookie', function(done) {
-        var app = App();
+        var app = new App();
 
-        app.use(function *(){
-          this.session;
-          this.body = 'greetings';
-        })
+        app.use(async (ctx) => {
+          console.log(ctx.session);
+          ctx.body = 'greetings';
+        });
 
         request(app.listen())
-        .get('/')
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          res.header.should.not.have.property('set-cookie');
-          done();
-        })
-      })
-    })
+          .get('/')
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            res.header.should.not.have.property('set-cookie');
+            done();
+          });
+      });
+      done();
+    });
 
-    describe('when populated', function(done){
-      it('should Set-Cookie', function(done){
-        var app = App();
+    describe('when populated', function(done) {
+      it('should Set-Cookie', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.message = 'hello';
           this.body = '';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .expect('Set-Cookie', /koa:sess/)
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          cookie = res.header['set-cookie'].join(';');
-          done();
-        })
-      })
+          .get('/')
+          .expect('Set-Cookie', /koa:sess/)
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            cookie = res.header['set-cookie'].join(';');
+            done();
+          });
+      });
 
-      it('should not Set-Cookie', function(done){
-        var app = App();
+      it('should not Set-Cookie', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.body = this.session;
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          res.header.should.not.have.property('set-cookie');
-          done();
-        })
-      })
-    })
-  })
+          .get('/')
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            res.header.should.not.have.property('set-cookie');
+            done();
+          });
+      });
+      done();
+    });
+  });
 
-  describe('saved session', function(){
-    describe('when not accessed', function(){
-      it('should not Set-Cookie', function(done){
-        var app = App();
+  describe('saved session', function() {
+    describe('when not accessed', function() {
+      it('should not Set-Cookie', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.body = 'aklsdjflasdjf';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .set('Cookie', cookie)
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          res.header.should.not.have.property('set-cookie');
-          done();
-        })
-      })
-    })
+          .get('/')
+          .set('Cookie', cookie)
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            res.header.should.not.have.property('set-cookie');
+            done();
+          });
+      });
+    });
 
-    describe('when accessed but not changed', function(){
-      it('should be the same session', function(done){
-        var app = App();
+    describe('when accessed but not changed', function() {
+      it('should be the same session', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.message.should.equal('hello');
           this.body = 'aklsdjflasdjf';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .set('Cookie', cookie)
-        .expect(200, done);
-      })
+          .get('/')
+          .set('Cookie', cookie)
+          .expect(200, done);
+      });
 
-      it('should not Set-Cookie', function(done){
-        var app = App();
+      it('should not Set-Cookie', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.message.should.equal('hello');
           this.body = 'aklsdjflasdjf';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .set('Cookie', cookie)
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          res.header.should.not.have.property('set-cookie');
-          done();
-        })
-      })
-    })
+          .get('/')
+          .set('Cookie', cookie)
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            res.header.should.not.have.property('set-cookie');
+            done();
+          });
+      });
+    });
 
-    describe('when accessed and changed', function(){
-      it('should Set-Cookie', function(done){
-        var app = App();
+    describe('when accessed and changed', function() {
+      it('should Set-Cookie', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.session.money = '$$$';
           this.body = 'aklsdjflasdjf';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .set('Cookie', cookie)
-        .expect('Set-Cookie', /koa:sess/)
-        .expect(200, done);
-      })
-    })
-  })
+          .get('/')
+          .set('Cookie', cookie)
+          .expect('Set-Cookie', /koa:sess/)
+          .expect(200, done);
+      });
+    });
+  });
 
-  describe('when session is', function(){
-    describe('null', function(){
-      it('should expire the session', function(done){
-        var app = App();
+  describe('when session is', function() {
+    describe('null', function() {
+      it('should expire the session', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.session = null;
           this.body = 'asdf';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .expect('Set-Cookie', /koa:sess/)
-        .expect(200, done);
-      })
-    })
+          .get('/')
+          .expect('Set-Cookie', /koa:sess/)
+          .expect(200, done);
+      });
+    });
 
-    describe('an empty object', function(){
-      it('should not Set-Cookie', function(done){
-        var app = App();
+    describe('an empty object', function() {
+      it('should not Set-Cookie', function(done) {
+        var app = new App();
 
-        app.use(function *(){
+        app.use(function*() {
           this.session = {};
           this.body = 'asdf';
-        })
-
-        request(app.listen())
-        .get('/')
-        .expect(200, function(err, res){
-          if (err) return done(err);
-          res.header.should.not.have.property('set-cookie');
-          done();
         });
-      })
-    })
 
-    describe('an object', function(){
-      it('should create a session', function(done){
-        var app = App();
+        request(app.listen())
+          .get('/')
+          .expect(200, function(err, res) {
+            if (err) return done(err);
+            res.header.should.not.have.property('set-cookie');
+            done();
+          });
+      });
+    });
 
-        app.use(function *(){
-          this.session = { message: 'hello' };
+    describe('an object', function() {
+      it('should create a session', function(done) {
+        var app = new App();
+
+        app.use(function*() {
+          this.session = {
+            message: 'hello'
+          };
           this.body = 'asdf';
-        })
+        });
 
         request(app.listen())
-        .get('/')
-        .expect('Set-Cookie', /koa:sess/)
-        .expect(200, done);
-      })
-    })
+          .get('/')
+          .expect('Set-Cookie', /koa:sess/)
+          .expect(200, done);
+      });
+    });
 
-    describe('anything else', function(){
-      it('should throw', function(done){
-        var app = App();
+    describe('anything else', function() {
+      it('should throw', function(done) {
+        var app = new App();
 
-        app.use(function *(){
-          this.session = 'asdf'
-        })
+        app.use(async (ctx) => {
+          ctx.session = 'asdf';
+        });
 
         request(app.listen())
-        .get('/')
-        .expect(500, done);
-      })
-    })
-  })
+          .get('/')
+          .expect(500, done);
+      });
+    });
+  });
 
-  describe('when an error is thrown downstream and caught upstream', function(){
-    it('should still save the session', function(done){
+  describe('when an error is thrown downstream and caught upstream', function() {
+    it('should still save the session', function(done) {
       var app = koa();
 
       app.keys = ['a', 'b'];
 
-      app.use(function *(next){
+      app.use(async (ctx, next) => {
         try {
-          yield *next;
+          await next();
         } catch (err) {
-          this.status = err.status;
-          this.body = err.message;
+          ctx.status = err.status;
+          ctx.body = err.message;
         }
       });
 
       app.use(session(app));
 
-      app.use(function *(next){
-        this.session.name = 'funny';
-        yield *next;
+      app.use(async (ctx, next) => {
+        ctx.session.name = 'funny';
+        await next();
       });
 
-      app.use(function *(next){
-        this.throw(401);
+      app.use(async (ctx) => {
+        ctx.status = 401;
       });
 
       request(app.listen())
-      .get('/')
-      .expect('Set-Cookie', /koa:sess/)
-      .expect(401, done);
-    })
-  })
+        .get('/')
+        .expect('Set-Cookie', /koa:sess/)
+        .expect(401, done);
+    });
+  });
 
-  describe('when maxAge present', function () {
-    describe('and not expire', function () {
-      it('should not expire the session', function (done) {
-        var app = App({ maxAge: 100 });
+  describe('when maxAge present', function() {
+    describe('and not expire', function() {
+      it('should not expire the session', function(done) {
+        var app = new App({
+          maxAge: 100
+        });
 
-        app.use(function* () {
+        app.use(function*() {
           if (this.method === 'POST') {
             this.session.message = 'hi';
             this.body = 200;
@@ -364,26 +372,28 @@ describe('Koa Session', function(){
         var server = app.listen();
 
         request(server)
-        .post('/')
-        .expect('Set-Cookie', /koa:sess/)
-        .end(function (err, res) {
-          if (err) return done(err);
-          var cookie = res.headers['set-cookie'].join(';');
+          .post('/')
+          .expect('Set-Cookie', /koa:sess/)
+          .end(function(err, res) {
+            if (err) return done(err);
+            var cookie = res.headers['set-cookie'].join(';');
 
-          request(server)
-          .get('/')
-          .set('cookie', cookie)
-          .expect('hi', done);
-        })
-      })
-    })
+            request(server)
+              .get('/')
+              .set('cookie', cookie)
+              .expect('hi', done);
+          });
+      });
+    });
 
 
-    describe('and expired', function () {
-      it('should expire the sess', function (done) {
-        var app = App({ maxAge: 100 });
+    describe('and expired', function() {
+      it('should expire the sess', function(done) {
+        var app = new App({
+          maxAge: 100
+        });
 
-        app.use(function* () {
+        app.use(function*() {
           if (this.method === 'POST') {
             this.session.message = 'hi';
             this.status = 200;
@@ -396,97 +406,99 @@ describe('Koa Session', function(){
         var server = app.listen();
 
         request(server)
-        .post('/')
-        .expect('Set-Cookie', /koa:sess/)
-        .end(function (err, res) {
-          if (err) return done(err);
-          var cookie = res.headers['set-cookie'].join(';');
+          .post('/')
+          .expect('Set-Cookie', /koa:sess/)
+          .end(function(err, res) {
+            if (err) return done(err);
+            var cookie = res.headers['set-cookie'].join(';');
 
-          setTimeout(function () {
-          request(server)
-          .get('/')
-          .set('cookie', cookie)
-          .expect('', done);
-          }, 200);
-        })
-      })
-    })
-  })
+            setTimeout(function() {
+              request(server)
+                .get('/')
+                .set('cookie', cookie)
+                .expect('', done);
+            }, 200);
+          });
+      });
+    });
+  });
 
-  describe('ctx.session.maxAge', function (){
-    it('should return opt.maxAge', function(done){
-      var app = App({maxAge: 100});
+  describe('ctx.session.maxAge', function() {
+    it('should return opt.maxAge', function(done) {
+      var app = new App({
+        maxAge: 100
+      });
 
-      app.use(function *(){
+      app.use(function*() {
         this.body = this.session.maxAge;
       });
 
       request(app.listen())
-      .get('/')
-      .expect('100', done);
-    })
-  })
+        .get('/')
+        .expect('100', done);
+    });
+  });
 
-  describe('ctx.session.maxAge=', function () {
-    it('should set sessionOptions.maxAge', function(done){
-      var app = App();
+  describe('ctx.session.maxAge=', function() {
+    it('should set sessionOptions.maxAge', function(done) {
+      var app = new App();
 
-      app.use(function* (){
+      app.use(function*() {
         this.session.foo = 'bar';
         this.session.maxAge = 100;
         this.body = this.session.foo;
       });
 
       request(app.listen())
-      .get('/')
-      .expect('Set-Cookie', /expires=/)
-      .expect(200, done);
-    })
-  })
+        .get('/')
+        .expect('Set-Cookie', /expires=/)
+        .expect(200, done);
+    });
+  });
 
-  describe('when get session before enter session middleware', function(){
-    it('should work', function(done){
+  describe('when get session before enter session middleware', function() {
+    it('should work', function(done) {
       var app = koa();
 
       app.keys = ['a', 'b'];
-      app.use(function* (next) {
+      app.use(function*(next) {
         this.session.foo = 'hi';
         yield next;
       });
       app.use(session({}, app));
-      app.use(function* (){
+      app.use(function*() {
         this.body = this.session;
       });
 
       request(app.callback())
-      .get('/')
-      .expect(200, function (err, res) {
-        should.not.exist(err);
-        var cookies = res.headers['set-cookie'].join(';');
-        cookies.should.containEql('koa:sess=');
-
-        request(app.callback())
         .get('/')
-        .set('Cookie', cookies)
-        .expect(200, done);
-      });
-    })
-  })
+        .expect(200, function(err, res) {
+          should.not.exist(err);
+          var cookies = res.headers['set-cookie'].join(';');
+          cookies.should.containEql('koa:sess=');
 
-  describe('when valid and beforeSave set', function(){
-    it('should ignore session when uid changed', function(done){
+          request(app.callback())
+            .get('/')
+            .set('Cookie', cookies)
+            .expect(200, done);
+        });
+    });
+  });
+
+  describe('when valid and beforeSave set', function() {
+    it('should ignore session when uid changed', function(done) {
       var app = koa();
 
       app.keys = ['a', 'b'];
       app.use(session({
-        valid: function (ctx, sess) {
+        valid: function(ctx, sess) {
           return ctx.cookies.get('uid') === sess.uid;
         },
-        beforeSave: function (ctx, sess) {
+        beforeSave: function(ctx, sess) {
           sess.uid = ctx.cookies.get('uid');
         }
       }, app));
-      app.use(function* () {
+      app.use(function*() {
         if (!this.session.foo) {
           this.session.foo = Date.now() + '|uid:' + this.cookies.get('uid');
         }
@@ -498,85 +510,92 @@ describe('Koa Session', function(){
       });
 
       request(app.callback())
-      .get('/')
-      .set('Cookie', 'uid=123')
-      .expect(200, function (err, res) {
-        should.not.exist(err);
-        var data = res.body;
-        var cookies = res.headers['set-cookie'].join(';');
-        cookies.should.containEql('koa:sess=');
-
-        request(app.callback())
         .get('/')
-        .set('Cookie', cookies + ';uid=123')
-        .expect(200)
-        .expect(data, function (err) {
+        .set('Cookie', 'uid=123')
+        .expect(200, function(err, res) {
           should.not.exist(err);
+          var data = res.body;
+          var cookies = res.headers['set-cookie'].join(';');
+          cookies.should.containEql('koa:sess=');
 
-          // should ignore uid:123 session and create a new session for uid:456
           request(app.callback())
-          .get('/')
-          .set('Cookie', cookies + ';uid=456')
-          .expect(200, function (err, res) {
-            should.not.exist(err);
-            res.body.uid.should.equal('456');
-            res.body.foo.should.not.equal(data.foo);
-            done();
-          });
-        });
-      });
-    })
-  })
+            .get('/')
+            .set('Cookie', cookies + ';uid=123')
+            .expect(200)
+            .expect(data, function(err) {
+              should.not.exist(err);
 
-  describe('when options.encode and options.decode are functions', function () {
-    describe('they are used to encode/decode stored cookie values', function () {
-      it('should work', function (done) {
-        var encodeCallCount = 0
-        var decodeCallCount = 0
+              // should ignore uid:123 session and create a new session for uid:456
+              request(app.callback())
+                .get('/')
+                .set('Cookie', cookies + ';uid=456')
+                .expect(200, function(err, res) {
+                  should.not.exist(err);
+                  res.body.uid.should.equal('456');
+                  res.body.foo.should.not.equal(data.foo);
+                  done();
+                });
+            });
+        });
+    });
+  });
+
+  describe('when options.encode and options.decode are functions', function() {
+    describe('they are used to encode/decode stored cookie values', function() {
+      it('should work', function(done) {
+        var encodeCallCount = 0;
+        var decodeCallCount = 0;
 
         function encode(data) {
-          ++encodeCallCount
-          return JSON.stringify({enveloped: data})
-        }
-        function decode(data) {
-          ++decodeCallCount
-          return JSON.parse(data).enveloped
+          ++encodeCallCount;
+          return JSON.stringify({
+            enveloped: data
+          });
         }
 
-        var app = koa();
+        function decode(data) {
+          ++decodeCallCount;
+          return JSON.parse(data).enveloped;
+        }
+
+        var app = new koa();
         app.keys = ['a', 'b'];
         app.use(session({
           encode: encode,
           decode: decode
         }, app));
 
-        app.use(function * () {
-          this.session.counter = (this.session.counter || 0) + 1
-          this.body = this.session
-          return
-        })
+        app.use(async (ctx) => {
+          ctx.session.counter = (ctx.session.counter || 0) + 1;
+          ctx.body = ctx.session;
+          return;
+        });
 
         request(app.callback())
           .get('/')
-          .expect(function () { encodeCallCount.should.above(0, 'encode was not called'); })
-          .expect(200, function (err, res) {
-            should.not.exist(err)
-            res.body.counter.should.equal(1, 'expected body to be equal to session.counter')
+          .expect(function() {
+            encodeCallCount.should.above(0, 'encode was not called');
+          })
+          .expect(200, function(err, res) {
+            should.not.exist(err);
+            res.body.counter.should.equal(1, 'expected body to be equal to session.counter');
             var cookies = res.headers['set-cookie'].join(';');
             request(app.callback())
               .get('/')
               .set('Cookie', cookies)
-              .expect(function () { decodeCallCount.should.be.above(1, 'decode was not called'); })
-              .expect(200, function (err, res) {
+              .expect(function() {
+                decodeCallCount.should.be.above(1, 'decode was not called');
+              })
+              .expect(200, function(err, res) {
                 should.not.exist(err);
                 res.body.counter.should.equal(2);
                 done();
-              })
-          })
-      })
-    })
-  })
-})
+              });
+          });
+      });
+    });
+  });
+});
 
 function App(options) {
   var app = koa();

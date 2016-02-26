@@ -1,18 +1,40 @@
 
-var session = require('./');
-var koa = require('koa');
-var app = koa();
+'using strict';
+/*
+    Import required dependencies
+ */
+const session = require('./');
+const Koa = require('koa');
 
+/*
+    Instantiate the koa app
+ */
+const app = new Koa();
+
+/*
+    Setup secrets
+ */
 app.keys = ['some secret hurr'];
 
+/*
+    Attach middleware
+ */
 app.use(session(app));
 
-app.use(function* (next){
-  if ('/favicon.ico' == this.path) return;
-  var n = this.session.views || 0;
-  this.session.views = ++n;
-  this.body = n + ' views';
+/*
+    Hopefully this works...
+ */
+app.use(async (ctx) => {
+  if ('/favicon.ico' === ctx.path){
+    return;
+  }
+  let n = ctx.session.views || 0;
+  ctx.session.views = ++n;
+  ctx.body = n + ' views';
 });
 
+/*
+    Turn it on
+ */
 app.listen(3000);
 console.log('listening on port 3000');
